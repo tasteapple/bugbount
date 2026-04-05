@@ -26,6 +26,9 @@ from modules.logic_scanner import run_logic_scanner
 from modules.race_condition import run_race_condition
 from modules.cloud_scanner import run_cloud_scanner
 from modules.oauth_scanner import run_oauth_scanner
+from modules.pivoting_scanner import run_pivoting_scanner
+from modules.asset_correlator import run_asset_correlator
+from modules.client_side_scanner import run_client_side_scanner
 from modules.reporter import run_reporter
 from urllib.parse import urljoin
 from rich.table import Table
@@ -37,11 +40,12 @@ async def main():
     parser.add_argument("-t", "--target", help="Target domain or IP", required=True)
     args = parser.parse_args()
 
-    console.print(Panel.fit("BBAF: Bug Bounty Automation Framework (God Tier Build)", style="bold magenta"))
+    console.print(Panel.fit("BBAF: Bug Bounty Automation Framework (END-GAME Build)", style="bold magenta"))
     
     target = args.target
 
-    # 0. WAF Detection
+    # 0. Asset Correlation & WAF Detection
+    related_domains = run_asset_correlator(target)
     waf = run_waf_detector(f"https://{target}")
     console.print(f"[bold yellow][*][/bold yellow] Target WAF: [cyan]{waf}[/cyan]")
     
@@ -49,7 +53,7 @@ async def main():
     subdomains = await run_recon(target)
     if not subdomains: return
     deep_subs = run_deep_recon(target, subdomains)
-    all_subs = list(set(subdomains + deep_subs))
+    all_subs = list(set(subdomains + deep_subs + related_domains))
 
     # 2. HTTP Probing Phase
     live_hosts = run_prober(all_subs)
@@ -72,15 +76,14 @@ async def main():
     # 4. Scanning & Exploitation Phase
     console.print("\n[bold red]--- Vulnerability Scanning & Exploitation Phase ---[/bold red]")
     
-    # 인프라성 스캔
     cves = run_vuln_scanner(live_hosts)
     infra_vulns = run_infra_scanner(live_hosts)
     api_vulns = run_api_explorer(live_hosts)
     cache_vulns = run_cache_scanner(live_hosts)
     smug_vulns = run_smuggling_scanner(live_hosts)
     bypass_vulns = run_access_bypass(live_hosts, found_paths)
+    client_vulns = run_client_side_scanner([h['url'] for h in live_hosts])
     
-    # 로직 및 고급 스캔
     custom_vulns = []
     advanced_vulns = []
     oob_vulns = []
@@ -88,6 +91,7 @@ async def main():
     logic_vulns = []
     cloud_vulns = []
     oauth_vulns = []
+    pivoting_vulns = []
 
     if test_targets:
         test_targets = list(set(test_targets))
@@ -98,15 +102,19 @@ async def main():
         logic_vulns = run_logic_scanner(test_targets)
         cloud_vulns = run_cloud_scanner(test_targets)
         oauth_vulns = run_oauth_scanner(test_targets)
-        # Race Condition (비동기 개별 실행)
         await run_race_condition(live_hosts)
+        
+        # SSRF 취약점이 발견되었다면 내부 피보팅 스캔 실행
+        ssrf_vulns = [v for v in (custom_vulns + oob_vulns + cloud_vulns) if "SSRF" in v.get('type', '')]
+        if ssrf_vulns:
+            pivoting_vulns = run_pivoting_scanner(ssrf_vulns)
 
-    # 모든 결과 통합
+    # 5. Reporting Phase
     all_vulns = cves + infra_vulns + api_vulns + cache_vulns + smug_vulns + \
                 bypass_vulns + osint_vulns + custom_vulns + advanced_vulns + \
-                oob_vulns + blind_vulns + logic_vulns + cloud_vulns + oauth_vulns
+                oob_vulns + blind_vulns + logic_vulns + cloud_vulns + oauth_vulns + \
+                pivoting_vulns + client_vulns
     
-    # 5. Reporting Phase
     run_reporter(target, all_vulns)
     
     console.print("\n[bold magenta]--- Full Pipeline Completed! Happy Hunting! ---[/bold magenta]")
