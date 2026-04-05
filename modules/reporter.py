@@ -17,7 +17,10 @@ class Reporter:
     def generate_html(self):
         """서버 없이 바로 열 수 있는 독립형 HTML 리포트 생성"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self.report_dir}/visual_report_{self.target}_{timestamp}.html"
+        
+        # 윈도우 파일명 금지 문자 처리 (https://... -> https___...)
+        safe_target = self.target.replace("://", "___").replace("/", "_").replace(":", "_").replace("?", "_")
+        filename = f"{self.report_dir}/visual_report_{safe_target}_{timestamp}.html"
         
         # 데이터를 JSON 문자열로 변환 (HTML 내 삽입용)
         json_data = json.dumps({
