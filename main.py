@@ -23,6 +23,9 @@ from modules.smuggling_scanner import run_smuggling_scanner
 from modules.deep_recon import run_deep_recon
 from modules.blind_injection import run_blind_scanner
 from modules.logic_scanner import run_logic_scanner
+from modules.race_condition import run_race_condition
+from modules.cloud_scanner import run_cloud_scanner
+from modules.oauth_scanner import run_oauth_scanner
 from urllib.parse import urljoin
 from rich.table import Table
 
@@ -44,8 +47,6 @@ async def main():
     # 1. Recon Phase
     subdomains = await run_recon(target)
     if not subdomains: return
-
-    # 1-2. Deep Recon (Permutations)
     deep_subs = run_deep_recon(target, subdomains)
     all_subs = list(set(subdomains + deep_subs))
 
@@ -70,6 +71,7 @@ async def main():
     # 4. Scanning & Exploitation Phase
     console.print("\n[bold red]--- Vulnerability Scanning & Exploitation Phase ---[/bold red]")
     
+    # 인프라성 스캔
     cves = run_vuln_scanner(live_hosts)
     infra_vulns = run_infra_scanner(live_hosts)
     api_vulns = run_api_explorer(live_hosts)
@@ -77,11 +79,14 @@ async def main():
     smug_vulns = run_smuggling_scanner(live_hosts)
     bypass_vulns = run_access_bypass(live_hosts, found_paths)
     
+    # 로직 및 고급 스캔
     custom_vulns = []
     advanced_vulns = []
     oob_vulns = []
     blind_vulns = []
     logic_vulns = []
+    cloud_vulns = []
+    oauth_vulns = []
 
     if test_targets:
         test_targets = list(set(test_targets))
@@ -90,11 +95,15 @@ async def main():
         oob_vulns = run_oob_verifier(test_targets)
         blind_vulns = run_blind_scanner(test_targets)
         logic_vulns = run_logic_scanner(test_targets)
+        cloud_vulns = run_cloud_scanner(test_targets)
+        oauth_vulns = run_oauth_scanner(test_targets)
+        # Race Condition (비동기 개별 실행)
+        await run_race_condition(live_hosts)
 
     # 모든 결과 통합
     all_vulns = cves + infra_vulns + api_vulns + cache_vulns + smug_vulns + \
                 bypass_vulns + osint_vulns + custom_vulns + advanced_vulns + \
-                oob_vulns + blind_vulns + logic_vulns
+                oob_vulns + blind_vulns + logic_vulns + cloud_vulns + oauth_vulns
     
     if all_vulns:
         console.print(f"\n[bold red][!] Total {len(all_vulns)} vulnerabilities found![/bold red]")
