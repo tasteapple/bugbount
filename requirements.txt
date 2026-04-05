@@ -1,0 +1,8 @@
+requests
+tldextract
+aiohttp
+aiodns
+colorama
+python-dotenv
+pyyaml
+rich

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+.env
+
+# Project specific
+data/results/
+data/temp/
+logs/
+config/keys.yaml
+
+# OS
+.DS_Store
+Thumbs.db
