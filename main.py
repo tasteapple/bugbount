@@ -4,13 +4,9 @@ import sys
 from rich.console import Console
 from rich.panel import Panel
 
-console = Console()
+from modules.recon import run_recon
 
-async def run_recon(target):
-    console.print(f"[bold blue][*][/bold blue] Starting Recon on: {target}")
-    # TODO: Implement recon logic
-    await asyncio.sleep(1)
-    console.print("[bold green][+][/bold green] Recon finished.")
+console = Console()
 
 async def main():
     parser = argparse.ArgumentParser(description="BBAF: Bug Bounty Automation Framework")
@@ -21,8 +17,19 @@ async def main():
     
     target = args.target
     
-    # Execution Flow
-    await run_recon(target)
+    # 1. Recon Phase
+    subdomains = await run_recon(target)
+    
+    if subdomains:
+        console.print(f"\n[bold yellow][!][/bold yellow] Discovered {len(subdomains)} subdomains:")
+        for sub in subdomains[:10]: # 상위 10개만 출력 (너무 많을 수 있음)
+            console.print(f"  - {sub}")
+        if len(subdomains) > 10:
+            console.print(f"  ... and {len(subdomains) - 10} more.")
+    else:
+        console.print("[bold red][!] No subdomains found.[/bold red]")
+        return
+
     # TODO: Discovery
     # TODO: Scanning
     # TODO: Exploitation
