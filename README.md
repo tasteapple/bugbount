@@ -22,9 +22,10 @@
 - **Advanced Injection**: SSTI(Template Injection), Blind NoSQLi, Prototype Pollution 자동 탐지.
 - **Auth & Logic**: OAuth Redirect Hijacking, JWT alg:none 분석, 403 Forbidden Bypass (20+ 기법).
 
-### 4. 클라이언트 사이드 보안 (Browser Level)
-- **postMessage Analyzer**: Window 간 통신 시 Origin 검증 미흡을 통한 데이터 탈취 분석.
-- **CSWSH**: Cross-Site WebSocket Hijacking 가능성 진단.
+### 4. 시각화 및 리포팅 (Reporting)
+- **Standalone HTML Report**: 서버 없이 브라우저에서 바로 열 수 있는 고퀄리티 비주얼 리포트 자동 생성.
+- **Attack Surface Chart**: Chart.js를 활용한 취약점 분포 및 자산 통계 시각화.
+- **Full Evidence Log**: 모든 취약점의 유형, URL, 페이로드 증거 포함.
 
 ## 🛠️ 기술 스택 (Tech Stack)
 - **Core**: Python 3.12+ (Asyncio & ThreadPoolExecutor)
