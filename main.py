@@ -115,7 +115,23 @@ async def main():
                 oob_vulns + blind_vulns + logic_vulns + cloud_vulns + oauth_vulns + \
                 pivoting_vulns + client_vulns
     
-    run_reporter(target, all_vulns)
+    # 리포터에 발견된 자산 수(all_subs) 정보 추가 전달
+    from modules.reporter import Reporter
+    reporter = Reporter(target, all_vulns)
+    # 수동으로 stats 업데이트 후 리포트 생성
+    md_filename = f"data/results/report_{target}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    data = {
+        "target": target,
+        "scan_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "vulnerabilities": all_vulns,
+        "stats": {
+            "total": len(all_vulns),
+            "assets": len(all_subs)
+        }
+    }
+    with open(f"{md_filename}.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+    reporter.generate_markdown()
     
     console.print("\n[bold magenta]--- Full Pipeline Completed! Happy Hunting! ---[/bold magenta]")
 

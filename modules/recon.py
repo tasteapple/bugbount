@@ -51,6 +51,9 @@ class SubdomainScanner:
 
     def run(self):
         """정찰 모듈 실행 메인 루틴"""
+        # 기본 타겟 도메인 무조건 추가 (서브도메인이 없을 경우 대비)
+        self.subdomains.add(self.target.lower())
+        
         self.fetch_crtsh()
         self.fetch_hackertarget()
         

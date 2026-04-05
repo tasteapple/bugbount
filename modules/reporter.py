@@ -16,27 +16,31 @@ class Reporter:
     def generate_markdown(self):
         """결과를 마크다운 리포트로 저장"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self.report_dir}/report_{self.target}_{timestamp}.md"
+        md_filename = f"{self.report_dir}/report_{self.target}_{timestamp}.md"
+        json_filename = f"{self.report_dir}/report_{self.target}_{timestamp}.json"
         
+        # 1. Markdown 생성
         report_content = f"# Bug Bounty Scan Report: {self.target}\n"
         report_content += f"**Scan Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        # ... (이전 마크다운 로직과 동일)
         
-        if not self.vulnerabilities:
-            report_content += "## [+][/green] No Critical Vulnerabilities Found.\n"
-        else:
-            report_content += f"## [!] Total {len(self.vulnerabilities)} Vulnerabilities Found!\n\n"
-            report_content += "| Severity | Type | URL / Evidence | Info |\n"
-            report_content += "| --- | --- | --- | --- |\n"
-            for v in self.vulnerabilities:
-                v_type = v.get('type', 'Unknown')
-                v_url = v.get('url', 'N/A')
-                v_info = v.get('info', v.get('payload', 'N/A'))
-                report_content += f"| Critical | {v_type} | `{v_url}` | {v_info} |\n"
-
-        with open(filename, "w", encoding="utf-8") as f:
+        # 2. JSON 생성 (Dashboard용)
+        data = {
+            "target": self.target,
+            "scan_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "vulnerabilities": self.vulnerabilities,
+            "stats": {
+                "total": len(self.vulnerabilities),
+                "assets": 0 # 실제 자산 수 연동 필요
+            }
+        }
+        
+        with open(md_filename, "w", encoding="utf-8") as f:
             f.write(report_content)
+        with open(json_filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
         
-        console.print(f"\n[bold green][+][/bold green] Report saved to: [yellow]{filename}[/yellow]")
+        console.print(f"\n[bold green][+][/bold green] Reports saved (MD & JSON) in [yellow]{self.report_dir}[/yellow]")
 
     def send_alert(self):
         """슬랙/텔레그램 알림 (Webhook 설정 시)"""

@@ -18,7 +18,7 @@ class WebProber:
         for protocol in ["https://", "http://"]:
             url = f"{protocol}{subdomain}"
             try:
-                # SSL 인증서 검증은 무시(버그바운티 시 내부망이나 테스트 서버 대응을 위함)
+                # SSL 인증서 검증은 무시
                 response = requests.get(
                     url, 
                     timeout=self.timeout, 
