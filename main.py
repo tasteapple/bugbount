@@ -11,6 +11,8 @@ from modules.bruteforce import run_bruteforce
 from modules.param_discovery import run_param_discovery
 from modules.scanner import run_vuln_scanner
 from modules.custom_scanner import run_custom_scanner
+from modules.advanced_scanner import run_advanced_scanner
+from modules.infra_scanner import run_infra_scanner
 from modules.oob_verifier import run_oob_verifier
 from urllib.parse import urljoin
 from rich.table import Table
@@ -37,46 +39,42 @@ async def main():
     # 3. Discovery Phase
     console.print("\n[bold magenta]--- Deep Discovery Phase ---[/bold magenta]")
     endpoints, secrets = run_js_analyzer(live_hosts)
-    if secrets:
-        console.print(f"[bold red][!][/bold red] Alert: Found {len(secrets)} secrets in JS files!")
-
     found_paths = run_bruteforce(live_hosts)
     found_params = run_param_discovery(live_hosts)
 
-    # 파라미터가 있는 잠재적 타겟(URL)을 모아 스캐너에 넘깁니다.
-    # JS에서 발견한 엔드포인트 중 쿼리 파라미터(?...)가 포함된 것 위주로 수집
     test_targets = []
     for path, source in endpoints:
         full_url = urljoin(source, path)
-        if "?" in full_url:
-            test_targets.append(full_url)
-            
-    # 브루트포스에서 찾은 경로 중에도 쿼리 파라미터 추가
+        if "?" in full_url: test_targets.append(full_url)
     for p in found_params:
         test_targets.append(f"{p['url']}?{p['param']}=test_value")
 
     # 4. Scanning & Exploitation Phase
     console.print("\n[bold red]--- Vulnerability Scanning & Exploitation Phase ---[/bold red]")
     
-    # 4-1. 기본 취약점(CVE/Misconfig) 스캔
+    # 4-1. 기본 & 인프라 스캔
     cves = run_vuln_scanner(live_hosts)
-    if cves:
-        for cve in cves:
-            console.print(f"[bold red][VULN][/bold red] {cve['type']} found at: {cve['url']}")
-
-    # 4-2. 커스텀 스캐너 (XSS, SQLi)
+    infra_vulns = run_infra_scanner(live_hosts)
+    
+    # 4-2. 커스텀 & 고도화 스캔
     if test_targets:
-        test_targets = list(set(test_targets)) # 중복 제거
+        test_targets = list(set(test_targets))
         custom_vulns = run_custom_scanner(test_targets)
-        for vuln in custom_vulns:
-            console.print(f"[bold red][VULN][/bold red] {vuln['type']} at {vuln['url']} (Payload: {vuln['payload']})")
-
-        # 4-3. SSRF & OOB 검증
+        advanced_vulns = run_advanced_scanner(test_targets)
         oob_vulns = run_oob_verifier(test_targets)
-        for vuln in oob_vulns:
-             console.print(f"[bold red][VULN][/bold red] {vuln['type']} at {vuln['url']}")
+
+        # 결과 통합 출력
+        all_vulns = cves + infra_vulns + custom_vulns + advanced_vulns + oob_vulns
+        if all_vulns:
+            console.print(f"\n[bold red][!] Total {len(all_vulns)} vulnerabilities found![/bold red]")
+            for v in all_vulns:
+                v_type = v.get('type', 'Unknown')
+                v_url = v.get('url', v.get('info', 'N/A'))
+                console.print(f"[bold red][VULN][/bold red] {v_type} -> {v_url}")
+        else:
+            console.print("[green][+][/green] No critical vulnerabilities found in this scan.")
     else:
-         console.print("[yellow][!][/yellow] No parameterized targets found for custom/OOB scanning. Skipping deep attacks.")
+         console.print("[yellow][!][/yellow] No parameterized targets found. Skipping deep attacks.")
 
     console.print("\n[bold magenta]--- Scan Completed ---[/bold magenta]")
 
