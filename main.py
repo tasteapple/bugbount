@@ -26,6 +26,7 @@ from modules.logic_scanner import run_logic_scanner
 from modules.race_condition import run_race_condition
 from modules.cloud_scanner import run_cloud_scanner
 from modules.oauth_scanner import run_oauth_scanner
+from modules.reporter import run_reporter
 from urllib.parse import urljoin
 from rich.table import Table
 
@@ -36,7 +37,7 @@ async def main():
     parser.add_argument("-t", "--target", help="Target domain or IP", required=True)
     args = parser.parse_args()
 
-    console.print(Panel.fit("BBAF: Bug Bounty Automation Framework", style="bold magenta"))
+    console.print(Panel.fit("BBAF: Bug Bounty Automation Framework (God Tier Build)", style="bold magenta"))
     
     target = args.target
 
@@ -105,16 +106,10 @@ async def main():
                 bypass_vulns + osint_vulns + custom_vulns + advanced_vulns + \
                 oob_vulns + blind_vulns + logic_vulns + cloud_vulns + oauth_vulns
     
-    if all_vulns:
-        console.print(f"\n[bold red][!] Total {len(all_vulns)} vulnerabilities found![/bold red]")
-        for v in all_vulns:
-            v_type = v.get('type', 'Unknown')
-            v_url = v.get('url', v.get('info', 'N/A'))
-            console.print(f"[bold red][VULN][/bold red] {v_type} -> {v_url}")
-    else:
-        console.print("[green][+][/green] No critical vulnerabilities found in this scan.")
-
-    console.print("\n[bold magenta]--- Scan Completed ---[/bold magenta]")
+    # 5. Reporting Phase
+    run_reporter(target, all_vulns)
+    
+    console.print("\n[bold magenta]--- Full Pipeline Completed! Happy Hunting! ---[/bold magenta]")
 
 if __name__ == "__main__":
     try:
