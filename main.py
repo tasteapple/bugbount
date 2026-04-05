@@ -5,6 +5,11 @@ from rich.console import Console
 from rich.panel import Panel
 
 from modules.recon import run_recon
+from modules.prober import run_prober
+from modules.js_analyzer import run_js_analyzer
+from modules.bruteforce import run_bruteforce
+from modules.param_discovery import run_param_discovery
+from rich.table import Table
 
 console = Console()
 
@@ -19,18 +24,36 @@ async def main():
     
     # 1. Recon Phase
     subdomains = await run_recon(target)
-    
-    if subdomains:
-        console.print(f"\n[bold yellow][!][/bold yellow] Discovered {len(subdomains)} subdomains:")
-        for sub in subdomains[:10]: # 상위 10개만 출력 (너무 많을 수 있음)
-            console.print(f"  - {sub}")
-        if len(subdomains) > 10:
-            console.print(f"  ... and {len(subdomains) - 10} more.")
-    else:
-        console.print("[bold red][!] No subdomains found.[/bold red]")
-        return
+    if not subdomains: return
 
-    # TODO: Discovery
+    # 2. HTTP Probing Phase
+    live_hosts = run_prober(subdomains)
+    if not live_hosts: return
+
+    # 3. Discovery Phase (JS, Brute, Param)
+    console.print("\n[bold magenta]--- Deep Discovery Phase ---[/bold magenta]")
+    
+    # 3-1. JS Analysis
+    endpoints, secrets = run_js_analyzer(live_hosts)
+    if secrets:
+        console.print(f"[bold red][!][/bold red] Alert: Found {len(secrets)} secrets in JS files!")
+
+    # 3-2. Directory Bruteforce
+    found_paths = run_bruteforce(live_hosts)
+    if found_paths:
+        table = Table(title="Interesting Paths Found", show_header=True, header_style="bold yellow")
+        table.add_column("URL")
+        table.add_column("Status")
+        for p in found_paths[:10]:
+            table.add_row(p['url'], str(p['status']))
+        console.print(table)
+
+    # 3-3. Parameter Discovery
+    found_params = run_param_discovery(live_hosts)
+    if found_params:
+        for fp in found_params:
+            console.print(f"[bold cyan][+][/bold cyan] Found potential param: [yellow]{fp['param']}[/yellow] at {fp['url']}")
+
     # TODO: Scanning
     # TODO: Exploitation
     # TODO: Reporting
